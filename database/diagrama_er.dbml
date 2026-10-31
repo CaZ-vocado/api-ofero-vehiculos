@@ -1,0 +1,86 @@
+// Ofero · Tienda de vehículos · Diagrama entidad-relación (6 tablas) · Autor: Daniel Carrasquilla
+// Pegar todo este texto en el panel izquierdo de https://dbdiagram.io y exportar a PNG
+
+Project ofero {
+  database_type: 'MySQL'
+  Note: 'Tienda de vehículos: marcas, vehículos, clientes, accesorios, ventas y accesorios por venta'
+}
+
+Table marcas {
+  id_marca int [pk, increment]
+  nombre varchar(60) [not null, unique]
+  pais_origen varchar(60) [not null]
+  sitio_web varchar(150)
+  creado timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table vehiculos {
+  id_vehiculo int [pk, increment]
+  vin char(17) [not null, unique, note: 'número de identificación vehicular']
+  referencia varchar(60) [not null]
+  version varchar(60) [not null]
+  tipo enum [not null, note: 'Sedán, Hatchback, SUV, Pickup, Van, Deportivo']
+  anio smallint [not null, note: 'CHECK 2000 a 2027']
+  color varchar(40) [not null]
+  combustible enum [not null, note: 'Gasolina, Diésel, Híbrido, Eléctrico']
+  transmision enum [not null, note: 'Manual, Automática']
+  condicion enum [not null, default: 'Nuevo', note: 'Nuevo, Usado']
+  kilometraje int [not null, default: 0, note: 'CHECK >= 0']
+  precio decimal(14,2) [not null, note: 'CHECK > 0']
+  estado enum [not null, default: 'Disponible', note: 'Disponible, Reservado, Vendido']
+  id_marca int [not null]
+  creado timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table clientes {
+  id_cliente int [pk, increment]
+  documento varchar(20) [not null, unique]
+  nombres varchar(80) [not null]
+  apellidos varchar(80) [not null]
+  correo varchar(120) [not null, unique]
+  telefono varchar(20) [not null]
+  direccion varchar(150)
+  ciudad varchar(60) [not null, default: 'Barranquilla']
+  creado timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table accesorios {
+  id_accesorio int [pk, increment]
+  codigo varchar(20) [not null, unique]
+  nombre varchar(100) [not null]
+  categoria enum [not null, note: 'Seguridad, Confort, Tecnología, Exterior, Mantenimiento']
+  precio decimal(12,2) [not null, note: 'CHECK > 0']
+  stock int [not null, default: 0, note: 'CHECK >= 0']
+  creado timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table ventas {
+  id_venta int [pk, increment]
+  numero_factura varchar(20) [not null, unique]
+  fecha datetime [not null, default: `CURRENT_TIMESTAMP`]
+  metodo_pago enum [not null, note: 'Contado, Crédito bancario, Leasing, Permuta']
+  precio_vehiculo decimal(14,2) [not null]
+  total decimal(14,2) [not null, default: 0, note: 'vehículo + accesorios']
+  id_cliente int [not null]
+  id_vehiculo int [not null, unique, note: 'un vehículo se vende una sola vez']
+  creado timestamp [not null, default: `CURRENT_TIMESTAMP`]
+}
+
+Table venta_accesorios {
+  id_detalle int [pk, increment]
+  id_venta int [not null]
+  id_accesorio int [not null]
+  cantidad int [not null, note: 'CHECK > 0']
+  precio_unitario decimal(12,2) [not null]
+  subtotal decimal(14,2) [note: 'columna generada: cantidad * precio_unitario']
+  indexes {
+    (id_venta, id_accesorio) [unique]
+  }
+  Note: 'Tabla intermedia N:M ventas ↔ accesorios'
+}
+
+Ref: vehiculos.id_marca > marcas.id_marca [delete: restrict, update: cascade]
+Ref: ventas.id_cliente > clientes.id_cliente [delete: restrict, update: cascade]
+Ref: ventas.id_vehiculo - vehiculos.id_vehiculo [delete: restrict, update: cascade]
+Ref: venta_accesorios.id_venta > ventas.id_venta [delete: cascade, update: cascade]
+Ref: venta_accesorios.id_accesorio > accesorios.id_accesorio [delete: restrict, update: cascade]

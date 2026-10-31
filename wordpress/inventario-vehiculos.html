@@ -1,0 +1,99 @@
+<!-- Ofero · Inventario de vehículos en vivo desde la API
+     Pegar en WordPress dentro de un bloque "HTML personalizado" en la página "Inventario en línea".
+     Cambia API_URL por la URL pública de Render. -->
+<div id="of-inventario">
+  <div class="of-filtros">
+    <input id="of-buscar" type="search" placeholder="Buscar marca, referencia o versión…" aria-label="Buscar">
+    <select id="of-marca" aria-label="Marca"><option value="">Todas las marcas</option></select>
+    <select id="of-tipo" aria-label="Tipo"><option value="">Todos los tipos</option></select>
+    <select id="of-condicion" aria-label="Condición">
+      <option value="">Nuevos y usados</option><option>Nuevo</option><option>Usado</option>
+    </select>
+  </div>
+  <p id="of-estado" class="of-estado">Cargando inventario…</p>
+  <div class="of-tabla-contenedor">
+    <table class="of-tabla">
+      <thead>
+        <tr><th>Vehículo</th><th>Tipo</th><th>Año</th><th>Combustible</th><th>Transmisión</th><th>Condición</th><th>Precio</th><th>Estado</th></tr>
+      </thead>
+      <tbody id="of-filas"></tbody>
+    </table>
+  </div>
+</div>
+
+<style>
+  #of-inventario *, #of-inventario *::before { box-sizing: border-box; }
+  #of-inventario { --of-principal: #1e293b; --of-acento: #dc2626; font-family: inherit; }
+  .of-filtros { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
+  .of-filtros input, .of-filtros select { flex: 1 1 180px; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; }
+  .of-estado { color: #475569; font-size: 14px; margin: 6px 0 12px; }
+  .of-tabla-contenedor { overflow-x: auto; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+  .of-tabla { width: 100%; border-collapse: collapse; background: #fff; font-size: 15px; }
+  .of-tabla thead th { background: var(--of-principal); color: #fff; text-align: left; padding: 12px; white-space: nowrap; border-bottom: 3px solid var(--of-acento); }
+  .of-tabla td { padding: 11px 12px; border-bottom: 1px solid #eef2f6; }
+  .of-tabla tbody tr:nth-child(even) { background: #f8fafc; }
+  .of-tabla tbody tr:hover { background: #fef2f2; }
+  .of-vehiculo strong { color: var(--of-principal); }
+  .of-vehiculo small { display: block; color: #64748b; }
+  .of-precio { font-weight: 700; color: var(--of-principal); white-space: nowrap; }
+  .of-chip { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .of-disponible { background: #dcfce7; color: #166534; } .of-reservado { background: #fef3c7; color: #92400e; } .of-vendido { background: #fee2e2; color: #991b1b; }
+  .of-vendido-fila td { color: #94a3b8; }
+  /* Celular: cada fila se vuelve una tarjeta */
+  @media (max-width: 700px) {
+    .of-tabla-contenedor { overflow: visible; box-shadow: none; }
+    .of-tabla { background: transparent; }
+    .of-tabla thead { display: none; }
+    .of-tabla, .of-tabla tbody, .of-tabla tr, .of-tabla td { display: block; width: 100%; }
+    .of-tabla tr { margin-bottom: 12px; border: 1px solid #e2e8f0; border-top: 4px solid var(--of-acento); border-radius: 10px; background: #fff !important; }
+    .of-tabla td { display: flex; justify-content: space-between; gap: 12px; text-align: right; border-bottom: 1px solid #f1f5f9; }
+    .of-tabla td::before { content: attr(data-titulo); font-weight: 600; color: #475569; text-align: left; }
+  }
+</style>
+
+<script>
+(function () {
+  const API_URL = 'https://api-ofero-vehiculos.onrender.com/api/vehiculos';   // ← cambia por tu URL de Render
+  const pesos = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 });
+  const km = new Intl.NumberFormat('es-CO');
+  const titulos = ['Vehículo', 'Tipo', 'Año', 'Combustible', 'Transmisión', 'Condición', 'Precio', 'Estado'];
+  const clases = { Disponible: 'of-disponible', Reservado: 'of-reservado', Vendido: 'of-vendido' };
+  let vehiculos = [];
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (t) => String(t ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  function pintar() {
+    const texto = $('of-buscar').value.toLowerCase();
+    const marca = $('of-marca').value, tipo = $('of-tipo').value, condicion = $('of-condicion').value;
+    const lista = vehiculos.filter((v) =>
+      (!marca || v.marca === marca) && (!tipo || v.tipo === tipo) && (!condicion || v.condicion === condicion) &&
+      [v.marca, v.referencia, v.version].join(' ').toLowerCase().includes(texto));
+    $('of-filas').innerHTML = lista.map((v) => {
+      const celdas = [
+        `<span class="of-vehiculo"><strong>${esc(v.marca)} ${esc(v.referencia)}</strong><small>${esc(v.version)} · ${esc(v.color)}</small></span>`,
+        esc(v.tipo), esc(v.anio), esc(v.combustible), esc(v.transmision),
+        v.condicion === 'Usado' ? `Usado · ${km.format(v.kilometraje)} km` : 'Nuevo',
+        `<span class="of-precio">${pesos.format(v.precio)}</span>`,
+        `<span class="of-chip ${clases[v.estado] || ''}">${esc(v.estado)}</span>`];
+      return `<tr class="${v.estado === 'Vendido' ? 'of-vendido-fila' : ''}">` +
+        celdas.map((c, i) => `<td data-titulo="${titulos[i]}">${c}</td>`).join('') + '</tr>';
+    }).join('');
+    const disponibles = lista.filter((v) => v.estado === 'Disponible').length;
+    $('of-estado').textContent = `${lista.length} vehículos · ${disponibles} disponibles · datos en vivo desde la API`;
+  }
+
+  fetch(API_URL)
+    .then((r) => r.json())
+    .then((respuesta) => {
+      const orden = { Disponible: 0, Reservado: 1, Vendido: 2 };
+      vehiculos = (respuesta.datos || []).sort((a, b) => orden[a.estado] - orden[b.estado]);
+      [...new Set(vehiculos.map((v) => v.marca))].sort().forEach((m) => $('of-marca').add(new Option(m, m)));
+      [...new Set(vehiculos.map((v) => v.tipo))].sort().forEach((t) => $('of-tipo').add(new Option(t, t)));
+      pintar();
+    })
+    .catch(() => { $('of-estado').textContent = 'No se pudo conectar con la API. Si está en Render gratis, espera 30 segundos y recarga.'; });
+
+  ['of-buscar', 'of-marca', 'of-tipo', 'of-condicion'].forEach((id) => $(id).addEventListener('input', pintar));
+})();
+</script>

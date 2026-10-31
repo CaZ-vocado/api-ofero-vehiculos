@@ -1,0 +1,966 @@
+{
+  "info": {
+    "_postman_id": "25d19243-8db6-4068-a637-bdfd09030f28",
+    "name": "Ofero API - Daniel Carrasquilla",
+    "description": "CRUD completo de la tabla ventas (la de más relaciones) y casos de error. Cambia la variable base_url por la URL de Render.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "0. Estado de la API",
+      "item": [
+        {
+          "name": "Estado de la API y la base de datos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": []
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. CRUD ventas (tabla principal)",
+      "item": [
+        {
+          "name": "CREATE - Registrar venta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ventas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ventas"
+              ]
+            },
+            "description": "Vende el Chevrolet Tracker (id 4) al cliente 3. No se envía el precio: la API toma el del inventario y marca el vehículo como Vendido. Guarda el id en id_venta.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numero_factura\": \"FV-OF-2026-0013\",\n  \"metodo_pago\": \"Contado\",\n  \"id_cliente\": 3,\n  \"id_vehiculo\": 4\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('id_venta', j.datos.id_venta);",
+                  "pm.test('Precio tomado del inventario', () => pm.expect(j.datos.precio_vehiculo).to.eql(112500000));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "READ - Listar ventas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ventas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ventas"
+              ]
+            },
+            "description": "Lista las ventas con el nombre del cliente y del vehículo (JOIN)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "READ - Filtrar ventas de contado (query)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ventas?metodo_pago=Contado",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ventas"
+              ],
+              "query": [
+                {
+                  "key": "metodo_pago",
+                  "value": "Contado"
+                }
+              ]
+            },
+            "description": "Parámetro de consulta: ?metodo_pago=Contado"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));",
+                  "pm.test('Solo ventas de contado', () => pm.response.json().datos.forEach(v => pm.expect(v.metodo_pago).to.eql('Contado')));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "READ - Obtener la venta creada (ruta)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ventas/{{id_venta}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ventas",
+                "{{id_venta}}"
+              ]
+            },
+            "description": "Parámetro de ruta"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "UPDATE - Cambiar método de pago",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ventas/{{id_venta}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ventas",
+                "{{id_venta}}"
+              ]
+            },
+            "description": "Actualización parcial: solo cambia los campos enviados.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"metodo_pago\": \"Crédito bancario\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));",
+                  "pm.test('Método actualizado', () => pm.expect(pm.response.json().datos.metodo_pago).to.eql('Crédito bancario'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE - Anular venta",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ventas/{{id_venta}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ventas",
+                "{{id_venta}}"
+              ]
+            },
+            "description": "El vehículo vuelve a quedar Disponible."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verificar que ya no existe (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ventas/{{id_venta}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ventas",
+                "{{id_venta}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Casos de error",
+      "item": [
+        {
+          "name": "404 - Venta inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ventas/9999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ventas",
+                "9999"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 404', () => pm.response.to.have.status(404));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 - Vehículo ya vendido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ventas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ventas"
+              ]
+            },
+            "description": "El vehículo 1 (Toyota Corolla Cross) ya se vendió.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numero_factura\": \"FV-OF-2026-0090\",\n  \"metodo_pago\": \"Contado\",\n  \"id_cliente\": 3,\n  \"id_vehiculo\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 - Número de factura duplicado (UNIQUE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ventas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ventas"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numero_factura\": \"FV-OF-2026-0001\",\n  \"metodo_pago\": \"Contado\",\n  \"id_cliente\": 3,\n  \"id_vehiculo\": 8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 - Cliente inexistente (llave foránea)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ventas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ventas"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numero_factura\": \"FV-OF-2026-0091\",\n  \"metodo_pago\": \"Contado\",\n  \"id_cliente\": 999,\n  \"id_vehiculo\": 8\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "400 - Datos inválidos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ventas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ventas"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numero_factura\": \"\",\n  \"metodo_pago\": \"Bitcoin\",\n  \"id_cliente\": \"abc\",\n  \"fecha\": \"ayer\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));",
+                  "pm.test('Lista cada campo con problema', () => pm.expect(pm.response.json().detalles.length).to.be.above(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "409 - Eliminar cliente con compras (ON DELETE RESTRICT)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clientes/1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes",
+                "1"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Otras tablas",
+      "item": [
+        {
+          "name": "Marcas",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/marcas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "marcas"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vehículos disponibles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/vehiculos?estado=Disponible",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ],
+              "query": [
+                {
+                  "key": "estado",
+                  "value": "Disponible"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clientes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/clientes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "clientes"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accesorios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/accesorios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "accesorios"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Accesorios de la venta 1",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/venta-accesorios?id_venta=1",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "venta-accesorios"
+              ],
+              "query": [
+                {
+                  "key": "id_venta",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agregar accesorio a la venta 3 (recalcula el total)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/venta-accesorios",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "venta-accesorios"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_venta\": 3,\n  \"id_accesorio\": 7,\n  \"cantidad\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));",
+                  "pm.collectionVariables.set('id_detalle', pm.response.json().datos.id_detalle);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Retirar el accesorio de la venta 3",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/venta-accesorios/{{id_detalle}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "venta-accesorios",
+                "{{id_detalle}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Demo WordPress (inventario en línea)",
+      "item": [
+        {
+          "name": "Vender Ford Territory (pasa a Vendido)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/ventas",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ventas"
+              ]
+            },
+            "description": "Recarga la página Inventario en línea: el Ford Territory aparece como Vendido.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"numero_factura\": \"FV-OF-2026-0100\",\n  \"metodo_pago\": \"Crédito bancario\",\n  \"id_cliente\": 5,\n  \"id_vehiculo\": 16\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));",
+                  "pm.collectionVariables.set('id_venta_demo', pm.response.json().datos.id_venta);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Anular esa venta (vuelve a Disponible)",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/ventas/{{id_venta_demo}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "ventas",
+                "{{id_venta_demo}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agregar vehículo al inventario",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/vehiculos",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos"
+              ]
+            },
+            "description": "Recarga Inventario en línea: aparece el Volkswagen Nivus.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vin\": \"9BWCA45U8SP001021\",\n  \"referencia\": \"Nivus\",\n  \"version\": \"Highline\",\n  \"tipo\": \"SUV\",\n  \"anio\": 2025,\n  \"color\": \"Gris\",\n  \"combustible\": \"Gasolina\",\n  \"transmision\": \"Automática\",\n  \"condicion\": \"Nuevo\",\n  \"kilometraje\": 0,\n  \"precio\": 109900000,\n  \"id_marca\": 9\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));",
+                  "pm.collectionVariables.set('id_vehiculo', pm.response.json().datos.id_vehiculo);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Quitar el vehículo del inventario",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/vehiculos/{{id_vehiculo}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "vehiculos",
+                "{{id_vehiculo}}"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Estado 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Formato JSON de la API', () => pm.expect(pm.response.json()).to.have.property('ok'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://api-ofero-vehiculos.onrender.com"
+    },
+    {
+      "key": "id_venta",
+      "value": ""
+    },
+    {
+      "key": "id_detalle",
+      "value": ""
+    },
+    {
+      "key": "id_venta_demo",
+      "value": ""
+    },
+    {
+      "key": "id_vehiculo",
+      "value": ""
+    }
+  ]
+}
